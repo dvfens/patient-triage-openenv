@@ -16,6 +16,15 @@ app = FastAPI(
 env = PatientTriageEnvironment()
 
 
+@app.get("/")
+def root() -> dict[str, object]:
+    return {
+        "name": "patient-triage-openenv",
+        "status": "running",
+        "endpoints": ["/healthz", "/reset", "/step", "/state", "/ws", "/docs"],
+    }
+
+
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}

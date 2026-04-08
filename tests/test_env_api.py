@@ -6,6 +6,14 @@ from patient_triage_env.server.app import app
 client = TestClient(app)
 
 
+def test_root_endpoint_is_available():
+    response = client.get("/")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "running"
+    assert "/reset" in payload["endpoints"]
+
+
 def test_reset_step_state_flow():
     reset_response = client.post("/reset", json={"task": "urgency_classification", "seed": 0})
     assert reset_response.status_code == 200
