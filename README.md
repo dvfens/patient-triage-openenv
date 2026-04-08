@@ -5,7 +5,7 @@ colorTo: green
 sdk: docker
 pinned: false
 app_port: 8000
-short_description: Deterministic synthetic patient triage benchmark for OpenEnv-style evaluation.
+short_description: Synthetic patient triage benchmark for OpenEnv.
 ---
 
 # Patient Triage OpenEnv
