@@ -1,3 +1,13 @@
+---
+title: Patient Triage OpenEnv
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+app_port: 8000
+short_description: Deterministic synthetic patient triage benchmark for OpenEnv-style evaluation.
+---
+
 # Patient Triage OpenEnv
 
 Deterministic synthetic patient-triage benchmark built for OpenEnv-style agent evaluation. The environment is a real-world workflow benchmark, not a toy game: an agent must assess structured patient presentations, ask at most one clarifying question when allowed, assign urgency, recommend a care destination, and justify its decision with controlled reason codes.
