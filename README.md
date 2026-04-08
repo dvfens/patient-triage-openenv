@@ -1,11 +1,11 @@
 ---
 title: Patient Triage OpenEnv
+emoji: "🏥"
 colorFrom: blue
 colorTo: green
 sdk: docker
-pinned: false
 app_port: 8000
-short_description: Synthetic patient triage benchmark for OpenEnv.
+pinned: false
 ---
 
 # Patient Triage OpenEnv
