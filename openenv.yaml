@@ -1,0 +1,12 @@
+name: patient-triage-openenv
+description: Deterministic synthetic patient triage benchmark with easy, medium, and hard tasks.
+entrypoint: patient_triage_env.server.app:app
+framework: fastapi
+port: 8000
+python_version: "3.11"
+dockerfile: Dockerfile
+tags:
+  - healthcare
+  - triage
+  - evaluation
+  - openenv

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "patient-triage-openenv"
+version = "0.1.0"
+description = "Deterministic OpenEnv-style patient triage benchmark for AI agents."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "pydantic>=2.8,<3.0",
+    "uvicorn>=0.30,<1.0",
+    "requests>=2.32,<3.0",
+    "websockets>=13,<16",
+    "openai>=2.7.2,<3.0",
+    "pyyaml>=6.0,<7.0",
+    "openenv-core>=0.2.3,<0.3.0",
+    "openenv @ git+https://github.com/meta-pytorch/OpenEnv.git@b3e41ae",
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "httpx>=0.27,<1.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["patient_triage_env*", "server*"]
+
+[tool.setuptools.package-data]
+"patient_triage_env.data" = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
