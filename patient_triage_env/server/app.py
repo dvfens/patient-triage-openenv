@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from ..models import ResetRequest, StateEnvelope, StepRequest
@@ -252,7 +252,7 @@ def healthz() -> dict[str, str]:
 
 
 @app.post("/reset")
-def reset(request: ResetRequest) -> dict:
+def reset(request: ResetRequest = Body(default_factory=ResetRequest)) -> dict:
     try:
         return env.reset(request).model_dump(mode="json")
     except ValueError as exc:

@@ -21,6 +21,14 @@ def test_status_endpoint_is_available():
     assert "/reset" in payload["endpoints"]
 
 
+def test_reset_accepts_empty_body():
+    response = client.post("/reset")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["done"] is False
+    assert payload["observation"]["task_name"] == "urgency_classification"
+
+
 def test_reset_step_state_flow():
     reset_response = client.post("/reset", json={"task": "urgency_classification", "seed": 0})
     assert reset_response.status_code == 200
