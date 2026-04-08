@@ -22,7 +22,7 @@ Return only JSON with keys:
 - action_type: ask_question | assign_urgency | recommend_care | finalize
 - question_id: optional string
 - urgency: optional low|medium|high|critical
-- care_destination: optional home_care|clinic_visit|urgent_care|emergency_room
+- care_destination: optional home_care|clinic|urgent_care|emergency_room
 - reason_codes: optional array of strings from the observation metadata
 - rationale: optional concise string
 Be safety-aware. Prefer concise, structured outputs."""
@@ -74,8 +74,23 @@ def _extract_last_action_error(result: Any) -> str:
     return _single_line(error)
 
 
+def log_start(task_name: str, model_name: str) -> None:
+    print(f"[START] task={task_name} env={BENCHMARK_NAME} model={model_name}")
+
+
+def log_step(step: int, action: str, reward: float, done: bool, error: str | None = None) -> None:
+    error_value = error if error else "null"
+    done_value = "true" if done else "false"
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_value} error={error_value}")
+
+
+def log_end(success: bool, steps: int, rewards: list[float]) -> None:
+    rewards_str = ",".join(f"{value:.2f}" for value in rewards)
+    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
+
+
 def run() -> int:
-    hf_token = os.environ.get("HF_TOKEN")
+    hf_token = os.environ.get("HF_TOKEN") or os.environ.get("API_KEY")
     if not hf_token:
         raise RuntimeError("HF_TOKEN is required for inference.py")
 
@@ -87,28 +102,33 @@ def run() -> int:
 
     env_client = PatientTriageEnv(base_url=env_url)
     llm_client = OpenAI(base_url=api_base_url, api_key=hf_token)
-    rewards: list[str] = []
+    rewards: list[float] = []
     step_count = 0
     success = False
     started = False
     exit_code = 1
 
     try:
-        result = env_client.reset(task=task, seed=seed)
-        print(f"[START] task={task.value} env={BENCHMARK_NAME} model={model_name}")
+        log_start(task.value, model_name)
         started = True
+        result = env_client.reset(task=task, seed=seed)
 
         while True:
-            action = choose_action(llm_client, model_name, result.observation)
-            result = env_client.step(action)
-            step_count += 1
-            rewards.append(f"{result.reward:.2f}")
-            action_str = json.dumps(action.model_dump(mode="json"), separators=(",", ":"))
-            error_str = _extract_last_action_error(result)
-            print(
-                f"[STEP] step={step_count} action={action_str} reward={result.reward:.2f} "
-                f"done={str(result.done).lower()} error={error_str}"
-            )
+            try:
+                action = choose_action(llm_client, model_name, result.observation)
+                result = env_client.step(action)
+                step_count += 1
+                rewards.append(float(result.reward))
+                action_str = json.dumps(action.model_dump(mode="json"), separators=(",", ":"))
+                error_str = _extract_last_action_error(result)
+                log_step(step_count, action_str, float(result.reward), bool(result.done), error_str)
+            except Exception as exc:
+                step_count += 1
+                rewards.append(0.0)
+                log_step(step_count, "error", 0.0, True, _single_line(exc))
+                exit_code = 1
+                break
+
             if result.done:
                 success = bool(result.info.get("final_score", 0.0) >= 0.7)
                 exit_code = 0
@@ -116,7 +136,7 @@ def run() -> int:
     finally:
         env_client.close()
         if started:
-            print(f"[END] success={str(success).lower()} steps={step_count} rewards={','.join(rewards)}")
+            log_end(success=success, steps=step_count, rewards=rewards)
 
     return exit_code
 
