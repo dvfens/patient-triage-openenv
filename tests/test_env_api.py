@@ -9,6 +9,13 @@ client = TestClient(app)
 def test_root_endpoint_is_available():
     response = client.get("/")
     assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Patient Triage OpenEnv" in response.text
+
+
+def test_status_endpoint_is_available():
+    response = client.get("/status")
+    assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "running"
     assert "/reset" in payload["endpoints"]
