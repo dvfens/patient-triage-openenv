@@ -16,11 +16,6 @@ BENCHMARK_NAME = "patient-triage-openenv"
 DEFAULT_ENV_BASE_URL = "http://localhost:8000"
 DEFAULT_API_BASE_URL = "https://router.huggingface.co/v1"
 DEFAULT_MODEL_NAME = "deepseek-ai/DeepSeek-V3-0324"
-TASK_SEQUENCE = [
-    TaskName.URGENCY_CLASSIFICATION,
-    TaskName.CARE_RECOMMENDATION,
-    TaskName.FULL_TRIAGE_DECISION,
-]
 
 SYSTEM_PROMPT = """You are a careful benchmark agent for a synthetic patient triage environment.
 Return only JSON with keys:
@@ -79,10 +74,6 @@ def _extract_last_action_error(result: Any) -> str:
     return _single_line(error)
 
 
-def _strict_open_interval(score: float) -> float:
-    return max(0.01, min(0.99, float(score)))
-
-
 def log_start(task_name: str, model_name: str) -> None:
     print(f"[START] task={task_name} env={BENCHMARK_NAME} model={model_name}")
 
@@ -95,8 +86,7 @@ def log_step(step: int, action: str, reward: float, done: bool, error: str | Non
 
 def log_end(success: bool, steps: int, rewards: list[float]) -> None:
     rewards_str = ",".join(f"{value:.2f}" for value in rewards)
-    score = _strict_open_interval(sum(rewards) / len(rewards)) if rewards else 0.01
-    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}")
+    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
 
 
 def run() -> int:
@@ -107,68 +97,46 @@ def run() -> int:
     env_url = os.environ.get("ENV_BASE_URL", DEFAULT_ENV_BASE_URL)
     api_base_url = os.environ.get("API_BASE_URL", DEFAULT_API_BASE_URL)
     model_name = os.environ.get("MODEL_NAME", DEFAULT_MODEL_NAME)
-    requested_task = os.environ.get("TASK_NAME")
-    base_seed = int(os.environ.get("TASK_SEED", "0"))
+    task = TaskName(os.environ.get("TASK_NAME", TaskName.FULL_TRIAGE_DECISION.value))
+    seed = int(os.environ.get("TASK_SEED", "0"))
 
     env_client = PatientTriageEnv(base_url=env_url)
     llm_client = OpenAI(base_url=api_base_url, api_key=hf_token)
+    rewards: list[float] = []
+    step_count = 0
+    success = False
+    started = False
     exit_code = 1
 
     try:
-        tasks_to_run = [TaskName(requested_task)] if requested_task else TASK_SEQUENCE
-        all_success = True
+        log_start(task.value, model_name)
+        started = True
+        result = env_client.reset(task=task, seed=seed)
 
-        for index, task in enumerate(tasks_to_run):
-            rewards: list[float] = []
-            step_count = 0
-            success = False
-            started = False
-
+        while True:
             try:
-                log_start(task.value, model_name)
-                started = True
-                try:
-                    result = env_client.reset(task=task, seed=base_seed + index)
-                except Exception as exc:
-                    step_count = 1
-                    rewards.append(0.01)
-                    log_step(step_count, "reset", 0.01, True, _single_line(exc))
-                    all_success = False
-                    continue
+                action = choose_action(llm_client, model_name, result.observation)
+                result = env_client.step(action)
+                step_count += 1
+                rewards.append(float(result.reward))
+                action_str = json.dumps(action.model_dump(mode="json"), separators=(",", ":"))
+                error_str = _extract_last_action_error(result)
+                log_step(step_count, action_str, float(result.reward), bool(result.done), error_str)
+            except Exception as exc:
+                step_count += 1
+                rewards.append(0.0)
+                log_step(step_count, "error", 0.0, True, _single_line(exc))
+                exit_code = 1
+                break
 
-                while True:
-                    try:
-                        action = choose_action(llm_client, model_name, result.observation)
-                        result = env_client.step(action)
-                        step_count += 1
-                        rewards.append(float(result.reward))
-                        action_str = json.dumps(action.model_dump(mode="json"), separators=(",", ":"))
-                        error_str = _extract_last_action_error(result)
-                        log_step(step_count, action_str, float(result.reward), bool(result.done), error_str)
-                    except Exception as exc:
-                        step_count += 1
-                        rewards.append(0.0)
-                        log_step(step_count, "error", 0.0, True, _single_line(exc))
-                        all_success = False
-                        break
-
-                    if result.done:
-                        final_score = _strict_open_interval(float(result.info.get("final_score", 0.5)))
-                        success = final_score >= 0.7
-                        if rewards:
-                            rewards[-1] = final_score
-                        else:
-                            rewards.append(final_score)
-                        if not success:
-                            all_success = False
-                        break
-            finally:
-                if started:
-                    log_end(success=success, steps=step_count, rewards=rewards)
-
-        exit_code = 0 if all_success else 1
+            if result.done:
+                success = bool(result.info.get("final_score", 0.0) >= 0.7)
+                exit_code = 0
+                break
     finally:
         env_client.close()
+        if started:
+            log_end(success=success, steps=step_count, rewards=rewards)
 
     return exit_code
 

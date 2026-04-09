@@ -23,7 +23,7 @@ CARE_ORDER = {
 
 
 def _clamp(score: float) -> float:
-    return max(0.01, min(0.99, round(score, 4)))
+    return max(0.0, min(1.0, round(score, 4)))
 
 
 def _urgency_score(case: CaseSpec, predicted: UrgencyLevel | None) -> float:
