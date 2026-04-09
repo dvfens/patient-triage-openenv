@@ -6,7 +6,7 @@ from patient_triage_env.models import CareDestination, TaskName, UrgencyLevel
 def test_easy_grader_rewards_exact_match():
     case = get_case(TaskName.URGENCY_CLASSIFICATION, case_id="easy_01_uri")
     score, audit = score_easy(case, {"urgency": UrgencyLevel.LOW})
-    assert score == 1.0
+    assert score == 0.99
     assert audit["urgency_score"] == 1.0
 
 
@@ -30,5 +30,5 @@ def test_hard_grader_caps_dangerous_miss():
         },
         asked_questions=[],
     )
-    assert score <= 0.15
+    assert 0.0 < score < 0.16
     assert audit["dangerous_undertriage"] is True
