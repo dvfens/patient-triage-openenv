@@ -87,9 +87,9 @@
     "reason_code_options": ["stable_for_outpatient_follow_up", "persistent_or_worsening_symptoms", "red_flag_symptom"],
     "questions": {},
     "gold_urgency": "low",
-    "gold_care_destination": "clinic_visit",
+    "gold_care_destination": "clinic",
     "minimum_safe_urgency": "low",
-    "minimum_safe_care_destination": "clinic_visit",
+    "minimum_safe_care_destination": "clinic",
     "gold_reason_codes": ["stable_for_outpatient_follow_up"],
     "mandatory_reason_codes": [],
     "rationale_keywords": [],
@@ -135,9 +135,9 @@
     "reason_code_options": ["stable_for_outpatient_follow_up", "respiratory_distress", "persistent_or_worsening_symptoms"],
     "questions": {},
     "gold_urgency": "medium",
-    "gold_care_destination": "clinic_visit",
+    "gold_care_destination": "clinic",
     "minimum_safe_urgency": "low",
-    "minimum_safe_care_destination": "clinic_visit",
+    "minimum_safe_care_destination": "clinic",
     "gold_reason_codes": ["persistent_or_worsening_symptoms"],
     "mandatory_reason_codes": [],
     "rationale_keywords": [],
@@ -192,3 +192,4 @@
     "max_steps": 2
   }
 ]
+

@@ -46,7 +46,7 @@ class UrgencyLevel(str, Enum):
 
 class CareDestination(str, Enum):
     HOME_CARE = "home_care"
-    CLINIC_VISIT = "clinic_visit"
+    CLINIC = "clinic"
     URGENT_CARE = "urgent_care"
     EMERGENCY_ROOM = "emergency_room"
 

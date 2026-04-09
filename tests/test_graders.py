@@ -13,7 +13,7 @@ def test_easy_grader_rewards_exact_match():
 def test_medium_grader_penalizes_undertriage():
     case = get_case(TaskName.CARE_RECOMMENDATION, case_id="medium_05_abdominal_pain")
     safe_score, _ = score_medium(case, {"care_destination": CareDestination.EMERGENCY_ROOM, "reason_codes": ["red_flag_symptom"]})
-    unsafe_score, audit = score_medium(case, {"care_destination": CareDestination.CLINIC_VISIT, "reason_codes": []})
+    unsafe_score, audit = score_medium(case, {"care_destination": CareDestination.CLINIC, "reason_codes": []})
     assert safe_score > unsafe_score
     assert audit["dangerous_undertriage"] is True
 
@@ -24,7 +24,7 @@ def test_hard_grader_caps_dangerous_miss():
         case,
         {
             "urgency": UrgencyLevel.MEDIUM,
-            "care_destination": CareDestination.CLINIC_VISIT,
+            "care_destination": CareDestination.CLINIC,
             "reason_codes": [],
             "rationale": "This sounds stable.",
         },

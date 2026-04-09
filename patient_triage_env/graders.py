@@ -16,7 +16,7 @@ URGENCY_ORDER = {
 
 CARE_ORDER = {
     CareDestination.HOME_CARE: 0,
-    CareDestination.CLINIC_VISIT: 1,
+    CareDestination.CLINIC: 1,
     CareDestination.URGENT_CARE: 2,
     CareDestination.EMERGENCY_ROOM: 3,
 }

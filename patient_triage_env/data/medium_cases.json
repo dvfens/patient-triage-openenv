@@ -72,9 +72,9 @@
       "daycare": {"prompt": "Does the child attend daycare?", "answer": "Yes, attends daycare.", "useful": false}
     },
     "gold_urgency": "medium",
-    "gold_care_destination": "clinic_visit",
+    "gold_care_destination": "clinic",
     "minimum_safe_urgency": "medium",
-    "minimum_safe_care_destination": "clinic_visit",
+    "minimum_safe_care_destination": "clinic",
     "gold_reason_codes": ["persistent_or_worsening_symptoms", "dehydration_risk"],
     "mandatory_reason_codes": [],
     "rationale_keywords": ["fever", "hydration"],
@@ -180,9 +180,9 @@
       "salt_intake": {"prompt": "Has salt intake changed?", "answer": "No significant change.", "useful": false}
     },
     "gold_urgency": "medium",
-    "gold_care_destination": "clinic_visit",
+    "gold_care_destination": "clinic",
     "minimum_safe_urgency": "medium",
-    "minimum_safe_care_destination": "clinic_visit",
+    "minimum_safe_care_destination": "clinic",
     "gold_reason_codes": ["medication_risk", "abnormal_vitals"],
     "mandatory_reason_codes": [],
     "rationale_keywords": ["orthostatic", "medication"],
@@ -209,10 +209,11 @@
     "gold_urgency": "medium",
     "gold_care_destination": "urgent_care",
     "minimum_safe_urgency": "medium",
-    "minimum_safe_care_destination": "clinic_visit",
+    "minimum_safe_care_destination": "clinic",
     "gold_reason_codes": ["persistent_or_worsening_symptoms", "high_risk_history"],
     "mandatory_reason_codes": [],
     "rationale_keywords": ["infection", "spreading"],
     "max_steps": 4
   }
 ]
+

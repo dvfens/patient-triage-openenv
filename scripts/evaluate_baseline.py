@@ -33,7 +33,7 @@ def heuristic_action(observation) -> TriageAction:
         reason_codes = ["red_flag_symptom"]
     elif any(token in full_text for token in ["fever", "dehydration", "elderly", "tachycardia", "asthma flare", "persistent vomiting"]):
         urgency = "medium"
-        care = "clinic_visit"
+        care = "clinic"
         reason_codes = ["persistent_or_worsening_symptoms"]
     else:
         urgency = "low"
