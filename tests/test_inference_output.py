@@ -86,5 +86,5 @@ def test_inference_print_format(monkeypatch):
     assert " reward=1.00 " in output[1]
     assert " done=true " in output[1]
     assert output[1].endswith("error=null")
-    assert output[2].startswith("[END] success=true steps=1 rewards=1.00")
+    assert output[2].startswith("[END] success=true steps=1 score=0.990 rewards=0.99")
     assert fake_client.closed is True
