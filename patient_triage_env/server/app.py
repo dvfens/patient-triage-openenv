@@ -226,6 +226,21 @@ def root() -> HTMLResponse:
         textarea::placeholder {
             color: rgba(185, 203, 230, 0.55);
         }
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        select option {
+            color: #0f1c2f;
+            background: #f4f8ff;
+        }
+        select option:checked,
+        select option:hover,
+        select option:focus {
+            color: #ffffff;
+            background: #2d6fd0;
+        }
         input:focus,
         select:focus,
         textarea:focus {
