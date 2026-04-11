@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
@@ -15,6 +17,114 @@ app = FastAPI(
     description="Synthetic patient triage benchmark for agent evaluation.",
 )
 env = PatientTriageEnvironment()
+
+
+def _normalize_message(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", text.lower())).strip()
+
+
+def _contains_any(text: str, terms: list[str]) -> bool:
+    return any(term in text for term in terms)
+
+
+def _chat_triage_suggestion(message: str) -> dict[str, object]:
+    normalized = _normalize_message(message)
+    if not normalized:
+        raise ValueError("Please describe symptoms, a disease, or a triage concern.")
+
+    urgency = "medium"
+    care_destination = "clinic"
+    reason_codes: list[str] = ["persistent_or_worsening_symptoms"]
+    label = "Needs timely medical review"
+    rationale = "Symptoms suggest an in-person evaluation is safer than self-management."
+
+    emergency_signals = [
+        "chest pain",
+        "stroke",
+        "face drooping",
+        "slurred speech",
+        "anaphylaxis",
+        "throat swelling",
+        "severe bleeding",
+        "unconscious",
+        "passed out",
+        "blue lips",
+        "suicidal",
+        "seizure",
+        "oxygen 88",
+        "oxygen 89",
+        "oxygen 90",
+    ]
+    urgent_signals = [
+        "shortness of breath",
+        "asthma attack",
+        "dehydration",
+        "high fever",
+        "pregnant bleeding",
+        "abdominal pain",
+        "severe headache",
+        "worsening cough",
+        "panic with chest tightness",
+    ]
+    mild_signals = [
+        "common cold",
+        "runny nose",
+        "sore throat",
+        "mild cough",
+        "seasonal allergy",
+        "mild headache",
+    ]
+
+    if _contains_any(normalized, emergency_signals) or (
+        "chest pain" in normalized and _contains_any(normalized, ["sweating", "left arm", "jaw", "breathless"])
+    ):
+        urgency = "critical"
+        care_destination = "emergency_room"
+        reason_codes = ["red_flag_symptom", "abnormal_vitals", "persistent_or_worsening_symptoms"]
+        label = "Emergency care now"
+        rationale = "This pattern includes red-flag features that should be assessed urgently in an emergency setting."
+    elif _contains_any(normalized, urgent_signals) or (
+        "fever" in normalized and _contains_any(normalized, ["infant", "baby", "older adult", "elderly"])
+    ):
+        urgency = "high"
+        care_destination = "urgent_care"
+        reason_codes = ["red_flag_symptom", "high_risk_history", "persistent_or_worsening_symptoms"]
+        label = "Urgent same-day assessment"
+        rationale = "The description suggests elevated risk or worsening symptoms that deserve prompt evaluation."
+    elif _contains_any(normalized, mild_signals):
+        urgency = "low"
+        care_destination = "home_care"
+        reason_codes = ["persistent_or_worsening_symptoms"]
+        label = "Likely home care with monitoring"
+        rationale = "The symptoms sound mild and may be suitable for supportive care if no red flags are present."
+    elif _contains_any(normalized, ["uti", "migraine", "vomiting", "diarrhea", "ear pain", "rash"]):
+        urgency = "medium"
+        care_destination = "clinic"
+        reason_codes = ["persistent_or_worsening_symptoms", "red_flag_symptom"]
+        label = "Clinic visit recommended"
+        rationale = "The presentation could require treatment or testing but does not sound immediately life-threatening."
+
+    answer = (
+        f"{label}. Suggested urgency: {urgency}. Suggested care destination: {care_destination}. "
+        f"Key reason codes: {', '.join(reason_codes)}."
+    )
+
+    return {
+        "message": message,
+        "answer": answer,
+        "urgency": urgency,
+        "care_destination": care_destination,
+        "reason_codes": reason_codes,
+        "rationale": rationale,
+        "suggested_action": {
+            "action_type": "finalize",
+            "urgency": urgency,
+            "care_destination": care_destination,
+            "reason_codes": reason_codes,
+            "rationale": rationale,
+        },
+        "disclaimer": "This is a deterministic benchmark-style helper, not medical advice.",
+    }
 
 
 @app.get("/")
@@ -399,6 +509,117 @@ def root() -> HTMLResponse:
         .hidden {
             display: none !important;
         }
+        .messages {
+            display: grid;
+            gap: 16px;
+            max-height: 430px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+        .bubble-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .bubble-row.user {
+            justify-content: flex-end;
+        }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            background: rgba(87, 189, 247, 0.12);
+            border: 1px solid rgba(87, 189, 247, 0.18);
+            color: #c7e9ff;
+            flex: 0 0 auto;
+        }
+        .bubble-row.user .avatar {
+            order: 2;
+            background: rgba(82, 216, 184, 0.12);
+            border-color: rgba(82, 216, 184, 0.18);
+            color: #d7fff4;
+        }
+        .bubble {
+            max-width: min(100%, 760px);
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 18px 40px rgba(1, 7, 17, 0.18);
+        }
+        .bubble.assistant {
+            background: rgba(16, 30, 52, 0.92);
+        }
+        .bubble.user {
+            background: linear-gradient(135deg, rgba(82, 216, 184, 0.18), rgba(87, 189, 247, 0.18));
+        }
+        .bubble-title {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .bubble-body {
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .bubble-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .bubble-chip {
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: rgba(87, 189, 247, 0.1);
+            border: 1px solid rgba(87, 189, 247, 0.14);
+            color: #cae7ff;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+        .composer-shell {
+            display: grid;
+            gap: 12px;
+        }
+        .prompt-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .prompt-chip {
+            width: auto;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--ink);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: none;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+        .composer-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+        .composer-row textarea {
+            min-height: 92px;
+        }
+        @media (max-width: 760px) {
+            .composer-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .debug-block {
+            display: grid;
+            gap: 12px;
+        }
         @media (max-width: 1180px) {
             .response-shell {
                 position: static;
@@ -507,7 +728,7 @@ def root() -> HTMLResponse:
                             <select id="care_destination">
                                 <option value="">(none)</option>
                                 <option value="home_care">home_care</option>
-                                <option value="clinic_visit">clinic_visit</option>
+                                <option value="clinic">clinic</option>
                                 <option value="urgent_care">urgent_care</option>
                                 <option value="emergency_room">emergency_room</option>
                             </select>
@@ -521,19 +742,19 @@ def root() -> HTMLResponse:
                         <label for="rationale">Rationale</label>
                         <textarea id="rationale" placeholder="Concise clinical reasoning"></textarea>
                     </div>
-                    <button onclick="stepEpisode()">Submit Step</button>
+                    <button onclick="sendAdvancedAction()">Submit Step</button>
                 </div>
             </div>
 
             <section class="response-shell">
                 <div class="response-top">
                     <div>
-                        <h2 style="margin:0 0 4px;">3) Live Response Console</h2>
-                        <p style="margin:0;color:var(--muted);font-size:.92rem;">Inspect the latest observation, reward, and state without leaving the page.</p>
+                        <h2 style="margin:0 0 4px;">3) Triage Chat Console</h2>
+                        <p style="margin:0;color:var(--muted);font-size:.92rem;">Describe symptoms like a chat prompt, or use slash commands to drive the real benchmark.</p>
                     </div>
                     <div class="status-line" id="status_pill">
                         <span class="status-dot"></span>
-                        <span id="status_text">Ready for your first reset.</span>
+                        <span id="status_text">Ready for your first message.</span>
                     </div>
                 </div>
                 <div class="response-grid">
@@ -551,62 +772,93 @@ def root() -> HTMLResponse:
                             <strong id="summary_progress">0 steps - pending</strong>
                         </div>
                     </div>
-                    <div class="helper-grid">
-                        <div class="chip-row" id="summary_chips">
-                            <div class="chip">reset -> step -> inspect</div>
-                        </div>
-                        <button class="ghost-button" onclick="getState()">Refresh State</button>
-                    </div>
-                    <pre id="output">Ready.
 
-Tip: Start with Reset Episode to load a patient case. The full JSON response will appear here.</pre>
+                    <div class="messages" id="messages"></div>
+
+                    <div class="composer-shell">
+                        <div class="prompt-grid">
+                            <button class="prompt-chip" onclick="fillPrompt('Chest pain with sweating and shortness of breath')">Chest pain</button>
+                            <button class="prompt-chip" onclick="fillPrompt('Child with high fever and low energy')">High fever</button>
+                            <button class="prompt-chip" onclick="fillPrompt('Severe allergic reaction with throat swelling')">Allergic reaction</button>
+                            <button class="prompt-chip" onclick="fillPrompt('/state')">/state</button>
+                        </div>
+                        <div class="composer-row">
+                            <div class="field">
+                                <label for="composer">Message</label>
+                                <textarea id="composer" placeholder="Describe a disease or symptoms, or use /reset, /ask, /urgency, /care, /finalize"></textarea>
+                            </div>
+                            <button onclick="handleComposer()">Send</button>
+                        </div>
+                    </div>
+
+                    <div class="debug-block">
+                        <button class="ghost-button" onclick="getState()">Refresh State</button>
+                        <pre id="output">Ready.
+
+Tip: Start with Reset Episode to load a patient case, or type a symptom description to get a demo triage suggestion.</pre>
+                    </div>
                 </div>
             </section>
         </section>
     </div>
 
     <script>
+        const messages = document.getElementById("messages");
         const output = document.getElementById("output");
         const statusPill = document.getElementById("status_pill");
         const statusText = document.getElementById("status_text");
         const summaryTask = document.getElementById("summary_task");
         const summaryCase = document.getElementById("summary_case");
         const summaryProgress = document.getElementById("summary_progress");
-        const summaryChips = document.getElementById("summary_chips");
+        const composer = document.getElementById("composer");
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;");
+        }
 
         function setStatus(msg, isError = false) {
             statusPill.classList.toggle("error", isError);
             statusText.textContent = msg;
         }
 
+        function addMessage(role, title, body, chips = []) {
+            const row = document.createElement("div");
+            row.className = `bubble-row ${role}`;
+            const meta = chips.length
+                ? `<div class="bubble-meta">${chips.map((item) => `<span class="bubble-chip">${escapeHtml(item)}</span>`).join("")}</div>`
+                : "";
+            row.innerHTML = `
+                <div class="avatar">${role === "assistant" ? "AI" : "You"}</div>
+                <div class="bubble ${role}">
+                    <div class="bubble-title">${escapeHtml(title)}</div>
+                    <div class="bubble-body">${escapeHtml(body)}</div>
+                    ${meta}
+                </div>
+            `;
+            messages.appendChild(row);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function fillPrompt(value) {
+            composer.value = value;
+            composer.focus();
+        }
+
+        function welcomeMessage() {
+            addMessage(
+                "assistant",
+                "Welcome",
+                "Describe a disease or symptom pattern and I will return a benchmark-style triage suggestion. If you want to operate the actual environment, use commands like /reset, /ask, /urgency, /care, /finalize, or /state.",
+                ["free-text demo", "real env commands", "deterministic output"]
+            );
+        }
+
         function showJson(data) {
             output.textContent = JSON.stringify(data, null, 2);
-        }
-
-        function chipsForData(data) {
-            const chips = [];
-            const observation = data.observation || {};
-            const state = data.state || {};
-            const metadata = observation.metadata || {};
-            const reasonCodeOptions = metadata.reason_code_options || [];
-
-            if (observation.difficulty) chips.push(`difficulty: ${observation.difficulty}`);
-            if (typeof observation.remaining_steps === "number") chips.push(`remaining: ${observation.remaining_steps}`);
-            if (typeof observation.reward === "number") chips.push(`reward: ${observation.reward.toFixed(2)}`);
-            if (state.final_score !== undefined && state.final_score !== null) chips.push(`final score: ${Number(state.final_score).toFixed(2)}`);
-            if (reasonCodeOptions.length) chips.push(`${reasonCodeOptions.length} reason codes`);
-
-            return chips.length ? chips : ["waiting for data"];
-        }
-
-        function renderChips(chips) {
-            summaryChips.innerHTML = "";
-            chips.forEach((chip) => {
-                const node = document.createElement("div");
-                node.className = "chip";
-                node.textContent = chip;
-                summaryChips.appendChild(node);
-            });
         }
 
         function updateSummary(data) {
@@ -628,8 +880,6 @@ Tip: Start with Reset Episode to load a patient case. The full JSON response wil
             } else {
                 summaryProgress.textContent = "0 steps - pending";
             }
-
-            renderChips(chipsForData(data));
         }
 
         function syncActionFields() {
@@ -644,6 +894,99 @@ Tip: Start with Reset Episode to load a patient case. The full JSON response wil
             document.getElementById("care_destination_wrap").classList.toggle("hidden", !(careOnly || finalizing));
             document.getElementById("reason_codes_wrap").classList.toggle("hidden", questionOnly);
             document.getElementById("rationale_wrap").classList.toggle("hidden", questionOnly);
+        }
+
+        function advancedActionPayload() {
+            const action = {
+                action_type: document.getElementById("action_type").value,
+            };
+            const questionId = document.getElementById("question_id").value.trim();
+            const urgency = document.getElementById("urgency").value;
+            const careDestination = document.getElementById("care_destination").value;
+            const reasonCodesRaw = document.getElementById("reason_codes").value.trim();
+            const rationale = document.getElementById("rationale").value.trim();
+
+            if (questionId) action.question_id = questionId;
+            if (urgency) action.urgency = urgency;
+            if (careDestination) action.care_destination = careDestination;
+            if (reasonCodesRaw) action.reason_codes = reasonCodesRaw.split(",").map((s) => s.trim()).filter(Boolean);
+            if (rationale) action.rationale = rationale;
+            return action;
+        }
+
+        function fillAdvancedAction(action) {
+            if (!action) return;
+            document.getElementById("action_type").value = action.action_type || "finalize";
+            document.getElementById("question_id").value = action.question_id || "";
+            document.getElementById("urgency").value = action.urgency || "";
+            document.getElementById("care_destination").value = action.care_destination || "";
+            document.getElementById("reason_codes").value = (action.reason_codes || []).join(",");
+            document.getElementById("rationale").value = action.rationale || "";
+            syncActionFields();
+        }
+
+        function observationText(data) {
+            const observation = data.observation || {};
+            const provisional = observation.provisional_decision || {};
+            const knownAnswers = observation.known_answers || {};
+            const answerLines = Object.keys(knownAnswers).length
+                ? Object.entries(knownAnswers).map(([k, v]) => `- ${k}: ${v}`).join("\\n")
+                : "none yet";
+
+            return [
+                observation.patient_summary ? `Patient summary:\\n${observation.patient_summary}` : null,
+                observation.feedback ? `Feedback:\\n${observation.feedback}` : null,
+                `Provisional urgency: ${provisional.urgency || "not set"}`,
+                `Provisional care: ${provisional.care_destination || "not set"}`,
+                `Reason codes: ${(provisional.reason_codes || []).join(", ") || "none"}`,
+                `Known answers:\\n${answerLines}`,
+            ].filter(Boolean).join("\\n\\n");
+        }
+
+        function actionSummary(action) {
+            const parts = [`type=${action.action_type}`];
+            if (action.question_id) parts.push(`question=${action.question_id}`);
+            if (action.urgency) parts.push(`urgency=${action.urgency}`);
+            if (action.care_destination) parts.push(`care=${action.care_destination}`);
+            if (action.reason_codes && action.reason_codes.length) parts.push(`reasons=${action.reason_codes.join(",")}`);
+            if (action.rationale) parts.push(`rationale=${action.rationale}`);
+            return parts.join(" | ");
+        }
+
+        function commandActionFromText(text) {
+            const trimmed = text.trim();
+            const lower = trimmed.toLowerCase();
+            if (lower.startsWith("/ask ")) {
+                return { action_type: "ask_question", question_id: trimmed.slice(5).trim() };
+            }
+            if (lower.startsWith("/urgency ")) {
+                const payload = trimmed.slice(9).trim();
+                const [urgency, ...tail] = payload.split(/\\s+/);
+                return { action_type: "assign_urgency", urgency, rationale: tail.join(" ") || undefined };
+            }
+            if (lower.startsWith("/care ")) {
+                const payload = trimmed.slice(6).trim();
+                const [careDestination, ...tail] = payload.split(/\\s+/);
+                return { action_type: "recommend_care", care_destination: careDestination, rationale: tail.join(" ") || undefined };
+            }
+            if (lower.startsWith("/finalize")) {
+                const payload = trimmed.slice(9).trim();
+                const action = { action_type: "finalize" };
+                const pairs = Array.from(payload.matchAll(/(urgency|care|reasons|rationale)=(".*?"|\\S+)/g));
+                pairs.forEach((match) => {
+                    const key = match[1];
+                    const value = match[2].replace(/^"|"$/g, "");
+                    if (key === "urgency") action.urgency = value;
+                    if (key === "care") action.care_destination = value;
+                    if (key === "reasons") action.reason_codes = value.split(",").map((item) => item.trim()).filter(Boolean);
+                    if (key === "rationale") action.rationale = value;
+                });
+                if (!pairs.length && payload) {
+                    action.rationale = payload;
+                }
+                return action;
+            }
+            return null;
         }
 
         async function callApi(path, method, body) {
@@ -667,37 +1010,36 @@ Tip: Start with Reset Episode to load a patient case. The full JSON response wil
                 const data = await callApi("/reset", "POST", { task, seed });
                 showJson(data);
                 updateSummary(data);
+                addMessage(
+                    "assistant",
+                    "Episode Reset",
+                    observationText(data),
+                    [data.observation.task_name, data.observation.case_id, `remaining ${data.observation.remaining_steps}`]
+                );
                 setStatus("Episode reset complete.");
             } catch (err) {
                 setStatus(err.message, true);
+                addMessage("assistant", "Reset failed", String(err.message), ["error"]);
             }
         }
 
-        async function stepEpisode() {
+        async function stepEpisode(action, label = null) {
             try {
                 setStatus("Submitting action...");
-                const action = {
-                    action_type: document.getElementById("action_type").value,
-                };
-
-                const questionId = document.getElementById("question_id").value.trim();
-                const urgency = document.getElementById("urgency").value;
-                const careDestination = document.getElementById("care_destination").value;
-                const reasonCodesRaw = document.getElementById("reason_codes").value.trim();
-                const rationale = document.getElementById("rationale").value.trim();
-
-                if (questionId) action.question_id = questionId;
-                if (urgency) action.urgency = urgency;
-                if (careDestination) action.care_destination = careDestination;
-                if (reasonCodesRaw) action.reason_codes = reasonCodesRaw.split(",").map(s => s.trim()).filter(Boolean);
-                if (rationale) action.rationale = rationale;
-
                 const data = await callApi("/step", "POST", { action });
                 showJson(data);
                 updateSummary(data);
+                addMessage("user", "Action", label || actionSummary(action));
+                addMessage(
+                    "assistant",
+                    data.done ? "Episode Result" : "Environment Response",
+                    observationText(data),
+                    [data.done ? "done" : `remaining ${data.observation.remaining_steps}`, `reward ${Number(data.reward).toFixed(2)}`]
+                );
                 setStatus("Action submitted.");
             } catch (err) {
                 setStatus(err.message, true);
+                addMessage("assistant", "Step failed", String(err.message), ["error"]);
             }
         }
 
@@ -707,13 +1049,82 @@ Tip: Start with Reset Episode to load a patient case. The full JSON response wil
                 const data = await callApi("/state", "GET");
                 showJson(data);
                 updateSummary(data);
+                const state = data.state || {};
+                addMessage(
+                    "assistant",
+                    "Current State",
+                    `Task: ${state.task_name || "n/a"}\\nCase: ${state.case_id || "n/a"}\\nStep count: ${state.step_count ?? 0}\\nBest partial score: ${state.best_partial_score ?? 0}\\nFinal score: ${state.final_score ?? "not set"}\\nLast feedback: ${state.last_feedback || "n/a"}`,
+                    [state.difficulty || "no difficulty", `${state.remaining_steps ?? 0} remaining`]
+                );
                 setStatus("State fetched.");
             } catch (err) {
                 setStatus(err.message, true);
+                addMessage("assistant", "State request failed", String(err.message), ["error"]);
             }
         }
 
+        async function sendAdvancedAction() {
+            const action = advancedActionPayload();
+            await stepEpisode(action);
+        }
+
+        async function handleDemoPrompt(text) {
+            try {
+                setStatus("Generating triage suggestion...");
+                const data = await callApi("/assistant/triage", "POST", { message: text });
+                fillAdvancedAction(data.suggested_action);
+                addMessage(
+                    "assistant",
+                    "Triage Suggestion",
+                    `${data.answer}\\n\\nReasoning:\\n${data.rationale}\\n\\n${data.disclaimer}`,
+                    [data.urgency, data.care_destination, `${data.reason_codes.length} reason codes`]
+                );
+                setStatus("Suggestion ready.");
+            } catch (err) {
+                setStatus(err.message, true);
+                addMessage("assistant", "Suggestion failed", String(err.message), ["error"]);
+            }
+        }
+
+        async function handleComposer() {
+            const text = composer.value.trim();
+            if (!text) return;
+
+            addMessage("user", "You", text);
+            composer.value = "";
+
+            const lower = text.toLowerCase();
+            if (lower.startsWith("/reset")) {
+                const [, task, seed] = text.split(/\s+/);
+                if (task) document.getElementById("task").value = task;
+                if (seed !== undefined) document.getElementById("seed").value = seed;
+                await resetEpisode();
+                return;
+            }
+            if (lower.startsWith("/state")) {
+                await getState();
+                return;
+            }
+
+            const action = commandActionFromText(text);
+            if (action) {
+                fillAdvancedAction(action);
+                await stepEpisode(action);
+                return;
+            }
+
+            await handleDemoPrompt(text);
+        }
+
+        composer.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                handleComposer();
+            }
+        });
+
         syncActionFields();
+        welcomeMessage();
     </script>
 </body>
 </html>
@@ -733,6 +1144,17 @@ def status() -> dict[str, object]:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/assistant/triage")
+def assistant_triage(payload: dict = Body(default_factory=dict)) -> dict[str, object]:
+    message = str(payload.get("message", "")).strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="message is required")
+    try:
+        return _chat_triage_suggestion(message)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/reset")
