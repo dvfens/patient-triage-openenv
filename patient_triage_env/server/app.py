@@ -138,23 +138,21 @@ def root() -> HTMLResponse:
     <title>Patient Triage OpenEnv</title>
     <style>
         :root {
-            --bg: #07111d;
-            --panel: rgba(13, 24, 42, 0.82);
-            --panel-strong: rgba(18, 34, 58, 0.92);
-            --panel-soft: #142b49;
-            --border: rgba(165, 206, 255, 0.14);
-            --border-strong: rgba(110, 200, 185, 0.28);
-            --ink: #edf4ff;
-            --muted: #95abc8;
-            --accent: #52d8b8;
-            --accent-2: #57bdf7;
-            --warn: #ff8f6b;
-            --danger: #ff6f86;
-            --shadow: 0 28px 64px rgba(1, 7, 17, 0.42);
-            --radius-xl: 28px;
-            --radius-lg: 22px;
-            --radius-md: 16px;
-            --radius-sm: 12px;
+            --bg: #f7f1f5;
+            --panel: rgba(255, 255, 255, 0.34);
+            --panel-soft: rgba(255, 255, 255, 0.52);
+            --border: rgba(88, 83, 114, 0.08);
+            --ink: #2f2b38;
+            --muted: #7f768a;
+            --accent: #ff9c88;
+            --accent-2: #f3a9d8;
+            --warn: #ff8b6f;
+            --danger: #ff6b7f;
+            --shadow: 0 18px 45px rgba(120, 102, 132, 0.08);
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+            --radius-md: 18px;
+            --radius-sm: 16px;
         }
         * { box-sizing: border-box; }
         body {
@@ -162,48 +160,40 @@ def root() -> HTMLResponse:
             font-family: Aptos, "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
             color: var(--ink);
             background:
-                radial-gradient(1100px 720px at -8% -12%, rgba(48, 97, 156, 0.55) 0%, transparent 45%),
-                radial-gradient(920px 560px at 108% -4%, rgba(27, 126, 109, 0.46) 0%, transparent 42%),
-                radial-gradient(680px 420px at 50% 120%, rgba(42, 104, 180, 0.18) 0%, transparent 60%),
+                radial-gradient(900px 620px at 0% 10%, rgba(194, 211, 255, 0.6) 0%, transparent 55%),
+                radial-gradient(980px 680px at 100% 0%, rgba(255, 213, 220, 0.56) 0%, transparent 52%),
+                radial-gradient(680px 420px at 50% 100%, rgba(255, 236, 207, 0.45) 0%, transparent 60%),
                 var(--bg);
             min-height: 100vh;
-            padding: 28px 20px 52px;
+            padding: 26px 18px 44px;
         }
         .wrap {
-            max-width: 1320px;
+            max-width: 1080px;
             margin: 0 auto;
             display: grid;
-            gap: 22px;
+            gap: 18px;
         }
         .hero,
         .panel,
         .response-shell {
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: var(--radius-xl);
             background:
-                linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+                linear-gradient(160deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.2)),
                 var(--panel);
-            backdrop-filter: blur(16px);
+            backdrop-filter: blur(18px);
             box-shadow: var(--shadow);
         }
         .hero {
-            padding: 28px;
+            padding: 42px 24px 18px;
             display: grid;
-            grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
-            gap: 24px;
-            align-items: end;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero::after {
-            content: "";
-            position: absolute;
-            inset: auto -120px -140px auto;
-            width: 320px;
-            height: 320px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(87, 189, 247, 0.20), transparent 68%);
-            pointer-events: none;
+            justify-items: center;
+            text-align: center;
+            gap: 14px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
         }
         .eyebrow {
             display: inline-flex;
@@ -211,31 +201,32 @@ def root() -> HTMLResponse:
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: rgba(82, 216, 184, 0.12);
-            color: #b7f7e6;
-            border: 1px solid rgba(82, 216, 184, 0.18);
+            background: rgba(255, 255, 255, 0.5);
+            color: #6f647a;
+            border: 1px solid rgba(126, 117, 140, 0.08);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.14em;
             text-transform: uppercase;
         }
         .hero h1 {
-            margin: 14px 0 12px;
-            font-size: clamp(2.2rem, 5vw, 4rem);
-            line-height: 0.98;
+            margin: 0;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            line-height: 1.05;
             letter-spacing: -0.05em;
+            margin-bottom: 6px;
         }
         .hero p {
             margin: 0;
-            max-width: 760px;
+            max-width: 560px;
+            margin-inline: auto;
+            text-align: center;
             color: var(--muted);
-            font-size: 1.03rem;
-            line-height: 1.65;
+            font-size: 1rem;
+            line-height: 1.55;
         }
         .hero-meta {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            display: none;
         }
         .hero-stat {
             padding: 16px;
@@ -254,47 +245,48 @@ def root() -> HTMLResponse:
         }
         .workspace {
             display: grid;
-            grid-template-columns: minmax(340px, 0.88fr) minmax(360px, 0.98fr) minmax(320px, 1.14fr);
-            gap: 22px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
             align-items: start;
         }
         @media (max-width: 1180px) {
-            .hero,
             .workspace {
                 grid-template-columns: 1fr;
             }
         }
         .panel {
-            padding: 22px 20px 20px;
+            padding: 16px 18px;
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: none;
         }
         .panel-heading {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
-            margin-bottom: 18px;
+            margin-bottom: 12px;
         }
         .panel h2 {
             margin: 0 0 4px;
-            font-size: 1.32rem;
+            font-size: 1rem;
             letter-spacing: -0.03em;
         }
         .panel p {
             margin: 0;
             color: var(--muted);
-            font-size: 0.93rem;
-            line-height: 1.55;
+            font-size: 0.84rem;
+            line-height: 1.45;
         }
         .step-badge {
-            min-width: 42px;
-            height: 42px;
+            min-width: 34px;
+            height: 34px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            border: 1px solid rgba(87, 189, 247, 0.22);
-            background: rgba(87, 189, 247, 0.12);
-            color: #bde7ff;
+            border: 1px solid rgba(126, 117, 140, 0.08);
+            background: rgba(255, 255, 255, 0.45);
+            color: #746b7f;
             font-weight: 800;
         }
         .field-grid {
@@ -325,9 +317,9 @@ def root() -> HTMLResponse:
         input, select, textarea, button {
             width: 100%;
             border-radius: var(--radius-sm);
-            border: 1px solid rgba(121, 173, 236, 0.18);
+            border: 1px solid rgba(126, 117, 140, 0.08);
             padding: 14px 16px;
-            background: linear-gradient(180deg, rgba(28, 56, 94, 0.95), rgba(24, 48, 81, 0.95));
+            background: rgba(255, 255, 255, 0.58);
             color: var(--ink);
             transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
             font: inherit;
@@ -342,21 +334,21 @@ def root() -> HTMLResponse:
             -moz-appearance: none;
         }
         select option {
-            color: #0f1c2f;
-            background: #f4f8ff;
+            color: #2f2b38;
+            background: #fffdfd;
         }
         select option:checked,
         select option:hover,
         select option:focus {
-            color: #ffffff;
-            background: #2d6fd0;
+            color: #2f2b38;
+            background: #fde7ef;
         }
         input:focus,
         select:focus,
         textarea:focus {
             outline: none;
-            border-color: rgba(87, 189, 247, 0.55);
-            box-shadow: 0 0 0 4px rgba(87, 189, 247, 0.12);
+            border-color: rgba(243, 169, 216, 0.45);
+            box-shadow: 0 0 0 4px rgba(243, 169, 216, 0.14);
         }
         textarea {
             min-height: 120px;
@@ -365,11 +357,11 @@ def root() -> HTMLResponse:
         button {
             cursor: pointer;
             background: linear-gradient(90deg, var(--accent), var(--accent-2));
-            color: #07222d;
+            color: #47394a;
             font-weight: 800;
             border: none;
             letter-spacing: 0.01em;
-            box-shadow: 0 16px 30px rgba(55, 198, 168, 0.18);
+            box-shadow: 0 12px 24px rgba(244, 161, 174, 0.16);
         }
         button:hover {
             filter: brightness(1.04);
@@ -386,9 +378,7 @@ def root() -> HTMLResponse:
             font-size: 12px;
         }
         .tip-list {
-            display: grid;
-            gap: 10px;
-            margin-top: 18px;
+            display: none;
         }
         .tip {
             padding: 12px 14px;
@@ -407,16 +397,23 @@ def root() -> HTMLResponse:
         .response-shell {
             padding: 0;
             overflow: hidden;
-            position: sticky;
-            top: 20px;
+            position: static;
+            background: rgba(255, 255, 255, 0.18);
+            border: none;
+            box-shadow: none;
+            order: -1;
+            grid-column: 1 / -1;
+            max-width: 920px;
+            width: 100%;
+            justify-self: center;
         }
         .response-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            padding: 18px 20px 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: grid;
+            justify-items: center;
+            gap: 12px;
+            padding: 8px 20px 4px;
+            border-bottom: none;
+            text-align: center;
         }
         .status-line {
             display: inline-flex;
@@ -424,9 +421,9 @@ def root() -> HTMLResponse:
             gap: 10px;
             padding: 10px 12px;
             border-radius: 999px;
-            background: rgba(82, 216, 184, 0.10);
-            color: #c2fff0;
-            border: 1px solid rgba(82, 216, 184, 0.14);
+            background: rgba(255, 255, 255, 0.46);
+            color: #72687c;
+            border: 1px solid rgba(126, 117, 140, 0.08);
             font-weight: 700;
         }
         .status-dot {
@@ -434,27 +431,20 @@ def root() -> HTMLResponse:
             height: 10px;
             border-radius: 50%;
             background: currentColor;
-            box-shadow: 0 0 0 6px rgba(82, 216, 184, 0.14);
+            box-shadow: 0 0 0 6px rgba(243, 169, 216, 0.16);
         }
         .status-line.error {
-            background: rgba(255, 111, 134, 0.12);
-            color: #ffc0ca;
+            background: rgba(255, 222, 228, 0.8);
+            color: #b25e72;
             border-color: rgba(255, 111, 134, 0.18);
         }
         .response-grid {
             display: grid;
-            gap: 16px;
-            padding: 18px 20px 22px;
+            gap: 14px;
+            padding: 12px 20px 22px;
         }
         .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        @media (max-width: 760px) {
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
+            display: none;
         }
         .summary-card {
             padding: 14px 16px;
@@ -511,10 +501,10 @@ def root() -> HTMLResponse:
         }
         .messages {
             display: grid;
-            gap: 16px;
-            max-height: 430px;
+            gap: 14px;
+            max-height: 460px;
             overflow: auto;
-            padding-right: 4px;
+            padding: 10px 4px 4px;
         }
         .bubble-row {
             display: flex;
@@ -525,15 +515,16 @@ def root() -> HTMLResponse:
             justify-content: flex-end;
         }
         .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
+            font-size: 0.72rem;
             font-weight: 800;
-            background: rgba(87, 189, 247, 0.12);
-            border: 1px solid rgba(87, 189, 247, 0.18);
-            color: #c7e9ff;
+            background: rgba(255, 255, 255, 0.48);
+            border: 1px solid rgba(126, 117, 140, 0.08);
+            color: #746b7f;
             flex: 0 0 auto;
         }
         .bubble-row.user .avatar {
@@ -544,16 +535,16 @@ def root() -> HTMLResponse:
         }
         .bubble {
             max-width: min(100%, 760px);
-            padding: 16px 18px;
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 18px 40px rgba(1, 7, 17, 0.18);
+            padding: 14px 16px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            box-shadow: 0 10px 24px rgba(120, 102, 132, 0.06);
         }
         .bubble.assistant {
-            background: rgba(16, 30, 52, 0.92);
+            background: rgba(255, 255, 255, 0.48);
         }
         .bubble.user {
-            background: linear-gradient(135deg, rgba(82, 216, 184, 0.18), rgba(87, 189, 247, 0.18));
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 242, 246, 0.74));
         }
         .bubble-title {
             font-size: 0.8rem;
@@ -576,49 +567,83 @@ def root() -> HTMLResponse:
         .bubble-chip {
             padding: 8px 10px;
             border-radius: 999px;
-            background: rgba(87, 189, 247, 0.1);
-            border: 1px solid rgba(87, 189, 247, 0.14);
-            color: #cae7ff;
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(126, 117, 140, 0.08);
+            color: #746b7f;
             font-size: 0.82rem;
             font-weight: 700;
         }
         .composer-shell {
             display: grid;
-            gap: 12px;
+            gap: 10px;
         }
         .prompt-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+            justify-content: center;
         }
         .prompt-chip {
             width: auto;
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--ink);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.44);
+            color: #71667b;
+            border: 1px solid rgba(126, 117, 140, 0.08);
             box-shadow: none;
-            font-size: 0.88rem;
+            font-size: 0.82rem;
             font-weight: 700;
         }
         .composer-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
+            gap: 10px;
             align-items: end;
+            background: rgba(255, 255, 255, 0.48);
+            border: 1px solid rgba(255, 255, 255, 0.36);
+            border-radius: 999px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(120, 102, 132, 0.08);
         }
         .composer-row textarea {
-            min-height: 92px;
+            min-height: 56px;
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 10px 12px;
         }
         @media (max-width: 760px) {
             .composer-row {
                 grid-template-columns: 1fr;
+                border-radius: 28px;
             }
         }
         .debug-block {
             display: grid;
             gap: 12px;
+            opacity: 0.88;
+        }
+        #composer {
+            resize: none;
+        }
+        label[for="composer"] {
+            display: none;
+        }
+        .debug-block .ghost-button {
+            width: auto;
+            justify-self: center;
+            padding-inline: 20px;
+        }
+        .debug-block pre {
+            max-height: 180px;
+            background: rgba(255, 255, 255, 0.34);
+            border: 1px solid rgba(255, 255, 255, 0.36);
+            color: #61586b;
+        }
+        .workspace > .panel {
+            max-width: 100%;
+            width: 100%;
+            justify-self: stretch;
         }
         @media (max-width: 1180px) {
             .response-shell {
@@ -631,12 +656,9 @@ def root() -> HTMLResponse:
     <div class="wrap">
         <section class="hero">
             <div>
-                <div class="eyebrow">Clinical Reasoning Benchmark</div>
+                <div class="eyebrow">Patient Triage</div>
                 <h1>Patient Triage OpenEnv</h1>
-                <p>
-                    A polished control room for your synthetic triage benchmark. Reset a case, compose an action with the
-                    right fields, inspect the live environment response, and iterate safely without digging through raw API calls.
-                </p>
+                <p>Describe symptoms. Get a triage direction.</p>
             </div>
             <div class="hero-meta">
                 <div class="hero-stat">
@@ -658,8 +680,8 @@ def root() -> HTMLResponse:
             <div class="panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>1) Reset Episode</h2>
-                        <p>Choose the benchmark task, lock a seed, and start a deterministic case.</p>
+                        <h2>Session</h2>
+                        <p>Task and seed.</p>
                     </div>
                     <div class="step-badge">1</div>
                 </div>
@@ -693,8 +715,8 @@ def root() -> HTMLResponse:
             <div class="panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>2) Compose Action</h2>
-                        <p>The form adapts to the chosen action, so you only see relevant controls when you need them.</p>
+                        <h2>Advanced</h2>
+                        <p>Structured action.</p>
                     </div>
                     <div class="step-badge">2</div>
                 </div>
@@ -749,8 +771,8 @@ def root() -> HTMLResponse:
             <section class="response-shell">
                 <div class="response-top">
                     <div>
-                        <h2 style="margin:0 0 4px;">3) Triage Chat Console</h2>
-                        <p style="margin:0;color:var(--muted);font-size:.92rem;">Describe symptoms like a chat prompt, or use slash commands to drive the real benchmark.</p>
+                        <h2 style="margin:0 0 4px;">Ask anything</h2>
+                        <p style="margin:0;color:var(--muted);font-size:.92rem;">Symptoms, disease, or a command.</p>
                     </div>
                     <div class="status-line" id="status_pill">
                         <span class="status-dot"></span>
