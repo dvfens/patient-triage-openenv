@@ -101,20 +101,39 @@ def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> No
 def run() -> int:
     hf_token = os.environ.get("HF_TOKEN") or os.environ.get("API_KEY")
     if not hf_token:
-        raise RuntimeError("HF_TOKEN is required for inference.py")
+        print("[ERROR] HF_TOKEN is required for inference.py")
+        return 1
 
     env_url = os.environ.get("ENV_BASE_URL", DEFAULT_ENV_BASE_URL)
     api_base_url = os.environ.get("API_BASE_URL", DEFAULT_API_BASE_URL)
     model_name = os.environ.get("MODEL_NAME", DEFAULT_MODEL_NAME)
     requested_task = os.environ.get("TASK_NAME")
-    base_seed = int(os.environ.get("TASK_SEED", "0"))
+    try:
+        base_seed = int(os.environ.get("TASK_SEED", "0"))
+    except ValueError:
+        print("[ERROR] TASK_SEED must be an integer")
+        return 1
 
-    env_client = PatientTriageEnv(base_url=env_url)
-    llm_client = OpenAI(base_url=api_base_url, api_key=hf_token)
+    try:
+        env_client = PatientTriageEnv(base_url=env_url)
+    except Exception as exc:
+        print(f"[ERROR] Failed to initialize environment client: {_single_line(exc)}")
+        return 1
+
+    try:
+        llm_client = OpenAI(base_url=api_base_url, api_key=hf_token)
+    except Exception as exc:
+        print(f"[ERROR] Failed to initialize model client: {_single_line(exc)}")
+        env_client.close()
+        return 1
     exit_code = 1
 
     try:
-        tasks_to_run = [TaskName(requested_task)] if requested_task else TASK_SEQUENCE
+        try:
+            tasks_to_run = [TaskName(requested_task)] if requested_task else TASK_SEQUENCE
+        except ValueError:
+            print(f"[ERROR] Invalid TASK_NAME: {requested_task}")
+            return 1
         all_success = True
 
         for index, task in enumerate(tasks_to_run):
@@ -177,4 +196,8 @@ def run() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run())
+    try:
+        raise SystemExit(run())
+    except Exception as exc:
+        print(f"[ERROR] Unhandled inference failure: {_single_line(exc)}")
+        raise SystemExit(1)
